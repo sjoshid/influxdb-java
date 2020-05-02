@@ -331,6 +331,7 @@ public class InfluxDBResultMapper {
   <T> boolean fieldValueModified(final Class<?> fieldType, final Field field, final T object, final Object value,
                                  final TimeUnit precision)
     throws IllegalArgumentException, IllegalAccessException {
+    //sj_todo
     if (String.class.isAssignableFrom(fieldType)) {
       field.set(object, String.valueOf(value));
       return true;
@@ -356,6 +357,7 @@ public class InfluxDBResultMapper {
 
   <T> boolean fieldValueForPrimitivesModified(final Class<?> fieldType, final Field field, final T object,
     final Object value) throws IllegalArgumentException, IllegalAccessException {
+    //sj_todo
     if (double.class.isAssignableFrom(fieldType)) {
       field.setDouble(object, ((Double) value).doubleValue());
       return true;
@@ -378,6 +380,7 @@ public class InfluxDBResultMapper {
   <T> boolean fieldValueForPrimitiveWrappersModified(final Class<?> fieldType, final Field field, final T object,
     final Object value) throws IllegalArgumentException, IllegalAccessException {
     if (Double.class.isAssignableFrom(fieldType)) {
+      //sj_todo
       field.set(object, value);
       return true;
     }
