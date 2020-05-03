@@ -21,6 +21,8 @@
 package org.influxdb.impl;
 
 import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.time.Instant;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeFormatterBuilder;
@@ -50,6 +52,8 @@ public class InfluxDBResultMapper {
    */
   private static final
     ConcurrentMap<String, ConcurrentMap<String, Field>> CLASS_FIELD_CACHE = new ConcurrentHashMap<>();
+
+  private static final ConcurrentMap<String, ConcurrentMap<String, Method>> CLASS_SETTERS_CACHE = new ConcurrentHashMap<>();
 
   private static final int FRACTION_MIN_WIDTH = 0;
   private static final int FRACTION_MAX_WIDTH = 9;
@@ -216,12 +220,26 @@ public class InfluxDBResultMapper {
       if (influxColumnAndFieldMap == null) {
         influxColumnAndFieldMap = initialMap;
       }
+      ConcurrentMap<String, Method> initialMap2 = new ConcurrentHashMap<>();
+      ConcurrentMap<String, Method> influxColumnAndFieldMap2 = CLASS_SETTERS_CACHE.putIfAbsent(clazz.getName(), initialMap2);
+      if (influxColumnAndFieldMap2 == null) {
+        influxColumnAndFieldMap2 = initialMap2;
+      }
 
       Class<?> c = clazz;
       while (c != null) {
         for (Field field : c.getDeclaredFields()) {
           Column colAnnotation = field.getAnnotation(Column.class);
           if (colAnnotation != null) {
+            //sj_todo handle booleans
+            String fieldName = field.getName();
+            String setterName = "set".concat(fieldName.substring(0,1).toUpperCase().concat(fieldName.substring(1)));
+            try {
+              Method setter = c.getDeclaredMethod(setterName, field.getType());
+              influxColumnAndFieldMap2.put(colAnnotation.name(), setter);
+            } catch (NoSuchMethodException e) {
+              e.printStackTrace();
+            }
             influxColumnAndFieldMap.put(colAnnotation.name(), field);
           }
         }
@@ -333,7 +351,12 @@ public class InfluxDBResultMapper {
     throws IllegalArgumentException, IllegalAccessException {
     //sj_todo
     if (String.class.isAssignableFrom(fieldType)) {
-      field.set(object, String.valueOf(value));
+      try {
+        Method setter = object.getClass().getDeclaredMethod("setName", fieldType);
+        setter.invoke(object, String.valueOf(value));
+      } catch (InvocationTargetException | NoSuchMethodException e) {
+        e.printStackTrace();
+      }
       return true;
     }
     if (Instant.class.isAssignableFrom(fieldType)) {
