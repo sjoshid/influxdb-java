@@ -36,7 +36,7 @@ public class InfluxDBMapperTest {
     ServerMeasure serverMeasure = createMeasure();
     influxDBMapper.save(serverMeasure);
 
-    Extended persistedMeasure = influxDBMapper.query(Extended.class).get(0);
+    ServerMeasure persistedMeasure = influxDBMapper.query(ServerMeasure.class).get(0);
     Assert.assertEquals(serverMeasure.getName(), persistedMeasure.getName());
     Assert.assertEquals(serverMeasure.getCpu(), persistedMeasure.getCpu(), 0);
     Assert.assertEquals(serverMeasure.isHealthy(), persistedMeasure.isHealthy());
@@ -104,9 +104,6 @@ public class InfluxDBMapperTest {
   }
 
   @Measurement(name = "server_measure", database = UDP_DATABASE)
-  static class Extended extends ServerMeasure {}
-
-
   static class ServerMeasure {
 
     /** Check the instant conversions */
@@ -144,7 +141,6 @@ public class InfluxDBMapperTest {
     }
 
     public void setName(String name) {
-      System.out.println("called setName");
       this.name = name;
     }
 
@@ -236,7 +232,7 @@ public class InfluxDBMapperTest {
   }
 
   private ServerMeasure createMeasure() {
-    Extended serverMeasure = new Extended();
+    ServerMeasure serverMeasure = new ServerMeasure();
     serverMeasure.setName("maverick");
     serverMeasure.setCpu(4.3d);
     serverMeasure.setHealthy(true);
