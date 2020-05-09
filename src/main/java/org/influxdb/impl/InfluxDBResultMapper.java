@@ -220,12 +220,11 @@ public class InfluxDBResultMapper {
       if (influxColumnAndFieldMap == null) {
         influxColumnAndFieldMap = initialMap;
       }
-      //sj_todo change var name.
-      ConcurrentMap<String, Method> initialMap2 = new ConcurrentHashMap<>();
-      //sj_todo change var name.
-      ConcurrentMap<String, Method> influxColumnAndFieldMap2 = CLASS_SETTERS_CACHE.putIfAbsent(clazz.getName(), initialMap2);
-      if (influxColumnAndFieldMap2 == null) {
-        influxColumnAndFieldMap2 = initialMap2;
+
+      ConcurrentMap<String, Method> classFieldSetters = new ConcurrentHashMap<>();
+      ConcurrentMap<String, Method> fieldSetters = CLASS_SETTERS_CACHE.putIfAbsent(clazz.getName(), classFieldSetters);
+      if (fieldSetters == null) {
+        fieldSetters = classFieldSetters;
       }
 
       Class<?> c = clazz;
@@ -237,9 +236,8 @@ public class InfluxDBResultMapper {
             String setterName = "set".concat(fieldName.substring(0,1).toUpperCase().concat(fieldName.substring(1)));
             try {
               Method setter = c.getDeclaredMethod(setterName, field.getType());
-              influxColumnAndFieldMap2.put(colAnnotation.name(), setter);
+              fieldSetters.put(colAnnotation.name(), setter);
             } catch (NoSuchMethodException e) {
-              //e.printStackTrace();
               //sj_todo ignore? maybe print a warning that no setter found?
             }
             influxColumnAndFieldMap.put(colAnnotation.name(), field);
@@ -334,6 +332,9 @@ public class InfluxDBResultMapper {
     try {
       if (!field.isAccessible()) {
         field.setAccessible(true);
+      }
+      if (!fieldSetter.isAccessible()) {
+        fieldSetter.setAccessible(true);
       }
       if (assignInstant(fieldType, field, fieldSetter, object, value, precision)
         || assignString(fieldType, field, fieldSetter, object, value)
@@ -466,122 +467,6 @@ public class InfluxDBResultMapper {
     }
     return isBooleanAssigned;
   }
-
-  /*<T> boolean fieldValueModified(final Class<?> fieldType, final Field field, final Method fieldSetter, final T object, final Object value,
-                                 final TimeUnit precision)
-          throws IllegalArgumentException, IllegalAccessException, InvocationTargetException {
-    if (String.class.isAssignableFrom(fieldType)) {
-      final String stringValue = String.valueOf(value);
-      if (fieldSetter != null) {
-        fieldSetter.invoke(object, stringValue);
-      } else {
-        field.set(object, stringValue);
-      }
-      return true;
-    }
-    if (Instant.class.isAssignableFrom(fieldType)) {
-      Instant instant;
-      if (value instanceof String) {
-        instant = Instant.from(RFC3339_FORMATTER.parse(String.valueOf(value)));
-      } else if (value instanceof Long) {
-        instant = Instant.ofEpochMilli(toMillis((long) value, precision));
-      } else if (value instanceof Double) {
-        instant = Instant.ofEpochMilli(toMillis(((Double) value).longValue(), precision));
-      } else if (value instanceof Integer) {
-        instant = Instant.ofEpochMilli(toMillis(((Integer) value).longValue(), precision));
-      } else {
-        throw new InfluxDBMapperException("Unsupported type " + field.getClass() + " for field " + field.getName());
-      }
-      if (fieldSetter != null) {
-        fieldSetter.invoke(object, instant);
-      } else {
-        field.set(object, instant);
-      }
-      return true;
-    }
-    return false;
-  }
-
-  <T> boolean fieldValueForPrimitivesModified(final Class<?> fieldType, final Field field, final Method fieldSetter, final T object,
-    final Object value) throws IllegalArgumentException, IllegalAccessException, InvocationTargetException {
-    if (double.class.isAssignableFrom(fieldType)) {
-      final double doubleValue = (Double) value;
-      if (fieldSetter != null) {
-        fieldSetter.invoke(object, doubleValue);
-      } else {
-        field.setDouble(object, doubleValue);
-      }
-      return true;
-    }
-    if (long.class.isAssignableFrom(fieldType)) {
-      final long longValue = ((Double) value).longValue();
-      if (fieldSetter != null) {
-        fieldSetter.invoke(object, longValue);
-      } else {
-        field.setLong(object, longValue);
-      }
-      return true;
-    }
-    if (int.class.isAssignableFrom(fieldType)) {
-      final int intValue =  ((Double) value).intValue();
-      if(fieldSetter != null) {
-        fieldSetter.invoke(object, intValue);
-      } else {
-        field.setInt(object, intValue);
-      }
-      return true;
-    }
-    if (boolean.class.isAssignableFrom(fieldType)) {
-      final boolean boolValue = Boolean.parseBoolean(String.valueOf(value));
-      if (fieldSetter != null) {
-        fieldSetter.invoke(object, boolValue);
-      } else {
-        field.setBoolean(object, boolValue);
-      }
-      return true;
-    }
-    return false;
-  }
-
-  <T> boolean fieldValueForPrimitiveWrappersModified(final Class<?> fieldType, final Field field, final Method fieldSetter, final T object,
-    final Object value) throws IllegalArgumentException, IllegalAccessException, InvocationTargetException {
-    if (Double.class.isAssignableFrom(fieldType)) {
-      if (fieldSetter != null) {
-        fieldSetter.invoke(object, value);
-      } else {
-        field.set(object, value);
-      }
-      return true;
-    }
-    if (Long.class.isAssignableFrom(fieldType)) {
-      final long longValue = ((Double) value).longValue();
-      if (fieldSetter != null) {
-        fieldSetter.invoke(object, longValue);
-      } else {
-        field.set(object, longValue);
-      }
-      return true;
-    }
-    if (Integer.class.isAssignableFrom(fieldType)) {
-      final int intValue = ((Double) value).intValue();
-      if (fieldSetter != null) {
-        fieldSetter.invoke(object, intValue);
-      } else {
-        field.set(object, intValue);
-      }
-      return true;
-    }
-    if (Boolean.class.isAssignableFrom(fieldType)) {
-      final boolean boolValue = Boolean.parseBoolean(String.valueOf(value));
-      if (fieldSetter != null) {
-        fieldSetter.invoke(object, boolValue);
-      } else {
-        field.set(object, boolValue);
-      }
-      return true;
-    }
-    return false;
-  }*/
 
   private Long toMillis(final long value, final TimeUnit precision) {
 
